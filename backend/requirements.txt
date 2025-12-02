@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-sqlmodel
-redis>=4.5.0
-pydantic
-python-dotenv
-requests

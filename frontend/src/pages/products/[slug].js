@@ -12,20 +12,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export async function getStaticPaths() {
   try {
     const res = await fetch(`${API_URL}/products`);
+    if (!res.ok) throw new Error("Falha na API");
     const products = await res.json();
 
-    // Cria um caminho para cada slug existente
     const paths = products.map((p) => ({
       params: { slug: p.slug }
     }));
 
     return { paths, fallback: 'blocking' };
   } catch (err) {
-    console.error("Erro no getStaticPaths:", err);
-    return { paths: [], fallback: false };
+    console.warn("⚠️ Backend offline durante o build. Gerando caminhos vazios.");
+    // Retorna lista vazia para o build passar
+    return { paths: [], fallback: 'blocking' };
   }
 }
-
 // --- ESSA PARTE TAMBÉM (Busca os dados de UM produto específico) ---
 export async function getStaticProps({ params }) {
   try {

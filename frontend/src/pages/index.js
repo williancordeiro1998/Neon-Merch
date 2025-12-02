@@ -5,6 +5,8 @@ import { useCart } from '@/context/useCart';
 import { useState, useEffect } from 'react';
 
 // URL da API (Fallback para localhost se não houver variável de ambiente)
+// Se estiver rodando no navegador, usa caminho relativo '/api'
+// Se estiver no servidor (Build), usa a URL completa (precisamos configurar na Vercel depois)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // 1. O Next.js roda isso no SERVIDOR antes de criar a página HTML
@@ -12,15 +14,19 @@ export async function getStaticProps() {
   try {
     // Tenta pegar produtos do Backend
     const res = await fetch(`${API_URL}/products`);
+    if (!res.ok) throw new Error("Falha na API");
     const products = await res.json();
     return {
       props: { products },
-      revalidate: 10 // Revalida a cada 10 segundos (ISR)
+      revalidate: 10
     };
   } catch (error) {
-    console.error("Erro ao buscar API:", error);
-    // Se a API estiver offline, retorna array vazio para não quebrar o site
-    return { props: { products: [] } };
+    console.warn("⚠️ Backend offline durante o build. Retornando lista vazia.");
+    // O PULO DO GATO: Retorna array vazio em vez de quebrar o build
+    return {
+      props: { products: [] },
+      revalidate: 10
+    };
   }
 }
 

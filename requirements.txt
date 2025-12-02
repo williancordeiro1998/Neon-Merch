@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+pydantic
+python-dotenv
+python-multipart
+python-jose
+passlib[bcrypt]
+bcrypt==4.0.1
+# Adicionar postgres se um dia eu quiser mudar de banco
