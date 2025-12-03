@@ -1,4 +1,5 @@
 import asyncio
+import os
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
@@ -9,7 +10,11 @@ from .db import init_db, get_session, engine
 from .models import Product, Order, OrderItem, CheckoutReq, User
 from .auth import get_password_hash, verify_password, create_access_token, get_current_user
 
-app = FastAPI(title="Neon Merch API")
+# --- CORREÇÃO PARA VERCEL ---
+# Define o caminho raiz como "/api" se estiver na Vercel, senão usa raiz vazia
+root_path = "/api" if os.getenv("VERCEL") else ""
+
+app = FastAPI(title="Neon Merch API", root_path=root_path)
 
 # CORS
 app.add_middleware(
@@ -24,7 +29,7 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
-    # Cria usuário admin e produtos automaticamente
+    # Cria usuário admin e produtos automaticamente ao iniciar
     with Session(engine) as session:
         # 1. Cria Admin
         if not session.exec(select(User).where(User.username == "admin")).first():
