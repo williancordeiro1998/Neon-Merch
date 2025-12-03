@@ -36,7 +36,7 @@ def on_startup():
             admin = User(username="admin", password_hash=get_password_hash("neon123"))
             session.add(admin)
 
-        # 2. LISTA MASSIVA DE 18 PRODUTOS (Para o Portfólio)
+        # 2. LISTA MASSIVA DE 18 PRODUTOS (LINKS REVISADOS E CORRIGIDOS)
         products_to_create = [
             # --- COMPUTADORES & SETUP ---
             {
@@ -45,7 +45,7 @@ def on_startup():
                 "description": "Setup completo com iluminação RGB, refrigeração líquida e RTX 4090.",
                 "price_cents": 2500000,
                 "stock": 5,
-                "image_url": "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=800&q=80"
             },
             {
                 "slug": "monitor-ultrawide-neon",
@@ -53,7 +53,7 @@ def on_startup():
                 "description": "49 polegadas, OLED, curvatura 1000R para imersão total.",
                 "price_cents": 850000,
                 "stock": 8,
-                "image_url": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80"
             },
             {
                 "slug": "gabinete-transparente",
@@ -61,7 +61,7 @@ def on_startup():
                 "description": "Gabinete full-tower de vidro temperado com 12 fans RGB.",
                 "price_cents": 120000,
                 "stock": 15,
-                "image_url": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=800&q=80"
             },
 
             # --- PERIFÉRICOS ---
@@ -71,7 +71,7 @@ def on_startup():
                 "description": "Switches ópticos, keycaps pudding e base de alumínio.",
                 "price_cents": 45000,
                 "stock": 25,
-                "image_url": "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=800&q=80"
             },
             {
                 "slug": "mouse-ultralight",
@@ -79,7 +79,7 @@ def on_startup():
                 "description": "Apenas 49g, sensor 26k DPI e conexão wireless sem delay.",
                 "price_cents": 35000,
                 "stock": 30,
-                "image_url": "https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&w=800&q=80"
             },
             {
                 "slug": "headset-void",
@@ -87,7 +87,7 @@ def on_startup():
                 "description": "Cancelamento de ruído ativo e áudio espacial 360 graus.",
                 "price_cents": 89000,
                 "stock": 12,
-                "image_url": "https://images.unsplash.com/photo-1596207891316-23054388978f?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80"
             },
             {
                 "slug": "microfone-streamer",
@@ -129,7 +129,7 @@ def on_startup():
                 "description": "Carregamento USB externo, compartimento para laptop 17 e à prova d'água.",
                 "price_cents": 19990,
                 "stock": 40,
-                "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1622441614874-9776b6560732?auto=format&fit=crop&w=800&q=80"
             },
 
             # --- DECORAÇÃO & LIFESTYLE ---
@@ -163,7 +163,7 @@ def on_startup():
                 "description": "Mesa com regulagem de altura elétrica e memória.",
                 "price_cents": 220000,
                 "stock": 10,
-                "image_url": "https://images.unsplash.com/photo-1595515106969-1ce29566ff1c?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1612451883033-7b4e486d5a73?auto=format&fit=crop&w=800&q=80"
             },
 
             # --- GADGETS ---
@@ -173,7 +173,7 @@ def on_startup():
                 "description": "Voe a 140km/h com óculos de imersão incluídos.",
                 "price_cents": 450000,
                 "stock": 3,
-                "image_url": "https://images.unsplash.com/photo-1506947411487-a56738267384?auto=format&fit=crop&w=800&q=80"
+                "image_url": "https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=800&q=80"
             },
             {
                 "slug": "console-retro",
@@ -193,19 +193,27 @@ def on_startup():
             }
         ]
 
-        # 3. Loop de criação (Só cria se não existir)
+        # 3. LÓGICA INTELIGENTE: Cria ou Atualiza
         for prod_data in products_to_create:
-            if not session.exec(select(Product).where(Product.slug == prod_data["slug"])).first():
+            # Tenta encontrar o produto pelo slug
+            existing_prod = session.exec(select(Product).where(Product.slug == prod_data["slug"])).first()
+
+            if not existing_prod:
+                # Se não existe, cria novo
                 new_prod = Product(**prod_data)
                 session.add(new_prod)
+            else:
+                # SE JÁ EXISTE, ATUALIZA A FOTO E PREÇO (Isso corrige as fotos quebradas)
+                existing_prod.image_url = prod_data["image_url"]
+                existing_prod.title = prod_data["title"]
+                existing_prod.price_cents = prod_data["price_cents"]
+                session.add(existing_prod)
 
         session.commit()
 
 
 # --- SIMULAÇÃO DE WORKER (WEBHOOK/EMAIL) ---
 def send_confirmation_email(email: str, order_id: int):
-    # Aqui entraria o código real (SMTP, SendGrid, AWS SES)
-    # Como é um worker, isso roda "em segundo plano"
     import time
     print(f"📧 [Worker] Iniciando envio de email para Pedido #{order_id}...")
     time.sleep(5)  # Simula demora
@@ -302,3 +310,4 @@ async def create_prod(
     session.add(product)
     session.commit()
     session.refresh(product)
+    return product
