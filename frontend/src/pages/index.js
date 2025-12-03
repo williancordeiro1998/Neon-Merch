@@ -1,42 +1,59 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { ShoppingCart, Zap, Search } from 'lucide-react';
+import { ShoppingCart, Zap, Search, RefreshCw } from 'lucide-react';
 import { useCart } from '@/context/useCart';
 import { useState, useEffect } from 'react';
 
-// URL da API (Fallback para localhost se não houver variável de ambiente)
-// Se estiver rodando no navegador, usa caminho relativo '/api'
-// Se estiver no servidor (Build), usa a URL completa (precisamos configurar na Vercel depois)
+// URL relativa para funcionar na Vercel (/api) ou absoluta local
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// 1. O Next.js roda isso no SERVIDOR antes de criar a página HTML
 export async function getStaticProps() {
   try {
-    // Tenta pegar produtos do Backend
     const res = await fetch(`${API_URL}/products`);
-    if (!res.ok) throw new Error("Falha na API");
+    if (!res.ok) throw new Error("API Offline no Build");
     const products = await res.json();
     return {
-      props: { products },
+      props: { initialProducts: products },
       revalidate: 10
     };
   } catch (error) {
-    console.warn("⚠️ Backend offline durante o build. Retornando lista vazia.");
-    // O PULO DO GATO: Retorna array vazio em vez de quebrar o build
+    // Se falhar no build (normal na Vercel), retorna vazio e o cliente busca depois
     return {
-      props: { products: [] },
+      props: { initialProducts: [] },
       revalidate: 10
     };
   }
 }
 
-export default function Home({ products }) {
-  // Conecta ao Zustand
+export default function Home({ initialProducts }) {
   const { items, add } = useCart();
+  const [products, setProducts] = useState(initialProducts);
+  const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Evita erro de hidratação do Zustand
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    // Se a página veio vazia do servidor, busca no navegador (Client-side Fetch)
+    if (initialProducts.length === 0) {
+      fetchProducts();
+    }
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      // Tenta buscar na rota relativa /api/products
+      const res = await fetch('/api/products');
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar produtos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
@@ -66,23 +83,29 @@ export default function Home({ products }) {
       {/* LISTA DE PRODUTOS */}
       <main className="flex-grow pt-24 pb-20 px-4 max-w-7xl mx-auto w-full">
         <h1 className="text-4xl font-bold mb-8 text-center">
-          Coleção <span className="text-green-400">2077</span>
+          Coleção <span className="text-green-400">Future</span>
         </h1>
 
-        {products.length === 0 ? (
+        {loading && (
+          <div className="flex justify-center my-10">
+            <RefreshCw className="animate-spin text-green-500 w-8 h-8" />
+          </div>
+        )}
+
+        {products.length === 0 && !loading ? (
           <div className="text-center text-slate-500 mt-20">
-            <p>Sistemas offline... (Nenhum produto encontrado ou API desligada)</p>
+            <p>Sistemas inicializando...</p>
+            <button onClick={fetchProducts} className="mt-4 text-green-400 underline">Tentar novamente</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {products.map((product) => (
               <div key={product.id} className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden hover:border-green-500 transition duration-300 group">
-                {/* Imagem Placeholder se não tiver URL */}
-                <div className="h-64 bg-slate-900 flex items-center justify-center overflow-hidden">
+                <div className="h-64 bg-slate-900 flex items-center justify-center overflow-hidden relative">
                    <img
-                     src={product.image_url || `https://via.placeholder.com/400?text=${product.slug}`}
+                     src={product.image_url}
                      alt={product.title}
-                     className="object-cover w-full h-full opacity-80 group-hover:opacity-100 transition"
+                     className="object-cover w-full h-full opacity-80 group-hover:opacity-100 transition group-hover:scale-105 duration-500"
                    />
                 </div>
 
