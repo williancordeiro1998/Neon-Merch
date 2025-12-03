@@ -1,99 +1,113 @@
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { ArrowLeft, ShoppingCart, Check, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner'; // Notificações
-import confetti from 'canvas-confetti'; // Confete
-import Button from '@/components/Button'; // Nosso botão novo
+import { ArrowLeft, ShoppingCart, Check, ShieldCheck, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
+import Button from '@/components/Button';
 
+// Configuração para Vercel
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// --- ESSA PARTE É CRUCIAL (Busca todos os produtos para criar as rotas) ---
+// 1. Diz ao Next.js para criar as páginas conforme forem acessadas
 export async function getStaticPaths() {
-  try {
-    const res = await fetch(`${API_URL}/products`);
-    if (!res.ok) throw new Error("Falha na API");
-    const products = await res.json();
-
-    const paths = products.map((p) => ({
-      params: { slug: p.slug }
-    }));
-
-    return { paths, fallback: 'blocking' };
-  } catch (err) {
-    console.warn("⚠️ Backend offline durante o build. Gerando caminhos vazios.");
-    // Retorna lista vazia para o build passar
-    return { paths: [], fallback: 'blocking' };
-  }
+  return { paths: [], fallback: 'blocking' };
 }
-// --- ESSA PARTE TAMBÉM (Busca os dados de UM produto específico) ---
+
+// 2. Apenas passa o SLUG para o componente, sem buscar dados no servidor (evita erro de URL relativa)
 export async function getStaticProps({ params }) {
-  try {
-    const res = await fetch(`${API_URL}/products/${params.slug}`);
-
-    // Se o backend disser que não existe (404), retornamos 404 no front
-    if (!res.ok) return { notFound: true };
-
-    const product = await res.json();
-    return { props: { product }, revalidate: 10 };
-  } catch (err) {
-    console.error("Erro no getStaticProps:", err);
-    return { notFound: true };
-  }
+  return {
+    props: { slug: params.slug },
+    revalidate: 10
+  };
 }
-// --------------------------------------------------------------------------
 
-export default function ProductPage({ product }) {
-  const [loading, setLoading] = useState(false);
+export default function ProductPage({ slug }) {
+  const [product, setProduct] = useState(null);
+  const [loadingData, setLoadingData] = useState(true); // Carregando os dados da página
+  const [buying, setBuying] = useState(false); // Carregando o botão de compra
+
+  // 3. Busca os dados no Navegador (Onde o /api funciona)
+  useEffect(() => {
+    if (!slug) return;
+
+    // Tenta buscar usando rota relativa primeiro (Vercel)
+    const fetchProduct = async () => {
+      try {
+        // Tenta rota relativa
+        const res = await fetch(`/api/products/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          setProduct(data);
+        } else {
+            // Se falhar, tenta rota absoluta (Localhost fallback)
+            const resLocal = await fetch(`${API_URL}/products/${slug}`);
+            if (resLocal.ok) {
+                const dataLocal = await resLocal.json();
+                setProduct(dataLocal);
+            } else {
+                toast.error("Produto não encontrado");
+            }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar produto:", error);
+        toast.error("Erro de conexão");
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchProduct();
+  }, [slug]);
 
   const handleBuy = async () => {
-    setLoading(true);
+    if (!product) return;
+    setBuying(true);
 
-    // 1. Montar o payload
     const payload = {
-      items: [
-        {
-          product_id: product.id,
-          quantity: 1
-        }
-      ]
+      items: [{ product_id: product.id, quantity: 1 }]
     };
 
     try {
-      const res = await fetch(`${API_URL}/checkout`, {
+      // Tenta rota relativa para checkout
+      const res = await fetch(`/api/checkout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.detail || 'Erro ao processar compra');
-      }
+      if (!res.ok) throw new Error(data.detail || 'Erro ao processar compra');
 
-      // 2. SUCESSO!
       toast.success(`Pedido #${data.order_id} confirmado! Enviamos um email.`);
-
-      // Efeito visual de confete
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#4ade80', '#ffffff', '#000000']
-      });
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#4ade80', '#ffffff'] });
 
     } catch (error) {
       toast.error(error.message);
     } finally {
-      setLoading(false);
+      setBuying(false);
     }
   };
 
-  // Se o fallback estiver carregando (raro com 'blocking', mas boa prática)
-  if (!product) return <div>Carregando...</div>;
+  // Loading State da Página
+  if (loadingData) {
+      return (
+          <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+              <Loader2 className="w-10 h-10 animate-spin text-green-500" />
+          </div>
+      );
+  }
+
+  // Erro 404 Visual
+  if (!product) {
+      return (
+          <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center">
+              <h1 className="text-4xl font-bold mb-4">Produto não encontrado</h1>
+              <Link href="/" className="text-green-400 hover:underline">Voltar para a loja</Link>
+          </div>
+      );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-8 flex items-center justify-center">
@@ -141,10 +155,9 @@ export default function ProductPage({ product }) {
               </span>
             </div>
 
-            {/* BOTÃO */}
             <Button
               onClick={handleBuy}
-              isLoading={loading}
+              isLoading={buying}
               disabled={product.stock <= 0}
               className="w-full text-lg"
             >
