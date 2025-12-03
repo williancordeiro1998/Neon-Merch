@@ -302,4 +302,3 @@ async def create_prod(
     session.add(product)
     session.commit()
     session.refresh(product)
-    return product
